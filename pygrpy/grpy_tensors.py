@@ -1,15 +1,20 @@
 import math
 import numpy as np
+import scipy as sp
+import scipy.linalg
+import json
 
-def transTranspose(tensor):
+_epsilon = np.array([[[0,0,0],[0,0,1],[0,-1,0]],[[0,0,-1],[0,0,0],[1,0,0]],[[0,1,0],[-1,0,0],[0,0,0]]]) #levi-civita(3)
+
+def _transTranspose(tensor):
     '''
     Returns :math:`a_jilk` given tensor :math:`a_ijkl`
     '''
     return np.transpose(tensor,[1,0,3,2])
 
-def epsilonVec(vec):
+def _epsilonVec(vec):
     '''
-    Retruns an :math:`\epsilon_ijk v_k`, a 3x3 matrix
+    Retruns an :math:`\\epsilon_ijk v_k`, a 3x3 matrix
     '''
     ret = np.zeros((3,3))
     ret[0][0] = 0
@@ -26,6 +31,69 @@ def epsilonVec(vec):
     
     return ret
 
+def _lapackinv(mat):
+    zz , _ = sp.linalg.lapack.dpotrf(mat, False, False) #cholesky decompose
+    inv_M , info = sp.linalg.lapack.dpotri(zz) #invert triangle
+    inv_M = np.triu(inv_M) + np.triu(inv_M, k=1).T #combine triangles
+    return inv_M
+
+def _epsilonMatVec(mat,vec):
+    '''
+    Returns  a_ij \epsilon_mjk v_k
+
+    '''
+    return np.matmul(mat,np.transpose( _epsilonVec(vec)))
+
+def _epsilonVecMat(vec,mat):
+    '''
+    Returns  \epsilon_ijk v_k a_im
+
+    '''
+    return np.matmul( np.transpose(_epsilonVec(vec)) , mat)
+
+def rigidProjectionMatrix(centres):
+    '''
+    Returns rigid projection matrix. When this matrix is multiplied with 
+    friction matrix it gives friction matrix of rigid arrangement of beads.
+
+    Parameters
+    ----------
+    centers: np.array
+        An ``N`` by 3 array describing locations of centres of ``N`` beads.
+
+    Returns
+    -------
+    np.array
+        A ``6`` by ``6N`` matrix containing projection coefficients.
+    '''
+
+    n = len(centres)
+    
+    tnBlocks = np.zeros((2*n,2,3,3)) # 2n x 2 of 3x3 blocks to concatenate
+
+    for i in range(0,n):
+        tnBlocks[i,0,:,:] = np.identity(3)
+
+        tmp = np.zeros((3,3))
+
+        tmp[0,0] = 0
+        tmp[0,1] = centres[i][2]
+        tmp[0,2] = -centres[i][1]
+        tmp[1,0] = -centres[i][2]
+        tmp[1,1] = 0
+        tmp[1,2] = centres[i][0]
+        tmp[2,0] = centres[i][1]
+        tmp[2,1] = -centres[i][0]
+        tmp[2,2] = 0
+
+        tnBlocks[i,1] = tmp
+
+        tnBlocks[n+i,0] = np.zeros((3,3))
+        tnBlocks[n+i,1] = np.identity(3)
+
+    tn = np.hstack(np.hstack(tnBlocks))
+    return tn
+
 def mu(centres,radii,blockmatrix = False):
     '''
     Returns grand mobility matrix in RPY approximation.
@@ -36,7 +104,7 @@ def mu(centres,radii,blockmatrix = False):
         An ``N`` by 3 array describing locations of centres of ``N`` beads.
     radii: np.array
         An array of length ``N`` describing sizes of ``N`` beads.
-    bockmatrix : {True,False}
+    blockmatrix : {True,False}
         Whether to retun rank 4 tensor instead of rank 2 tensor.
 
     Returns
@@ -47,11 +115,6 @@ def mu(centres,radii,blockmatrix = False):
         All translations before rotations, then by bead index, then by coordinate.
 
         Unless ``blockmatrix`` is turned to ``True``, then ``np.array`` with ``size=(2,2,N,N,3,3)`` is returned
-
-    Example
-    -------
-    >>> muTT(np.array([[0.0,0.0,0.0],[0.0,0.0,1.5]]),np.array([1.0,1.0])
-    array([[0slfkjasdlfjkdlajksf0,0,0]])####### TODO ####### return value
 
     '''
     n = len(radii) #number of beads
@@ -134,10 +197,89 @@ def mu(centres,radii,blockmatrix = False):
             # GRPY approximation is of form scalar * matrix + scalar * matrix
             muTT[i,j,:,:] = TTidentityScale * np.identity(3) + TTrHatScale * np.outer(rHatMatrix[i][j],rHatMatrix[i][j])
             muRR[i,j,:,:] = RRidentityScale * np.identity(3) + RRrHatScale * np.outer(rHatMatrix[i][j],rHatMatrix[i][j])
-            muRT[i,j,:,:] = RTScale * epsilonVec(rHatMatrix[i][j])
+            muRT[i,j,:,:] = RTScale * _epsilonVec(rHatMatrix[i][j])
 
     if blockmatrix:
-        return np.array([[muTT,muRT],[transTranspose(muRT),muRR]])
+        return np.array([[muTT,muRT],[_transTranspose(muRT),muRR]])
     else:
-        return np.hstack(np.hstack(np.hstack(np.hstack(np.array([[muTT,muRT],[transTranspose(muRT),muRR]])))))
+        return np.hstack(np.hstack(np.hstack(np.hstack(np.array([[muTT,muRT],[_transTranspose(muRT),muRR]])))))
 
+def conglomerateMobilityMatrix(centres,radii):
+    '''
+    Returns mobility matrix centred at `[0,0,0]` of bead conglomerate specified 
+    by `centres` and `radii`. Treats conglomerate as rigid body.
+    
+
+    Parameters
+    ----------
+    centers: np.array
+        An ``N`` by 3 array describing locations of centres of ``N`` beads.
+    radii: np.array
+        An array of length ``N`` describing sizes of ``N`` beads.
+    
+    Returns
+    -------
+    np.array
+        A `6` by `6` array specifying mobility matrix centred at `[0,0,0]`. 
+        Indicies are ordered `ux,uy,uz,wx,wy,wz`.
+
+    '''
+    rpm = rigidProjectionMatrix(centres)
+    gmm = mu(centres,radii) #grand mobility matrix
+    gmmi = _lapackinv(gmm) #lapack inverse is fast
+    
+    fri = np.matmul(np.matmul(np.transpose(rpm),gmmi),rpm) # p'. inv(M) . p
+
+    return _lapackinv(fri)
+
+def mobilityCentre(mobility_matrix):
+    '''
+    Returns mobility cetre realtive to zero centered mobility matrix `mobility_matrix`.
+
+    Parameters
+    ----------
+    mobility_matrix: np.array
+        A `6` by `6` array specifying mobility matrix centred at `[0,0,0]`
+
+    Returns
+    -------
+    np.array
+        A length `3` vector. Mobility centres location relative to `[0,0,0]`.
+
+    '''
+    ret = np.zeros(3)
+
+    # Rewrite mobility matrix in block form [[a,b],[b^T,c]]
+    a = mobility_matrix[:3,:3]
+    b = mobility_matrix[:3,3:6]
+    c = mobility_matrix[3:6,3:6]
+
+    # x_c = 1/2 (trC 1 - C)^-1 . (\\epsilon : (b - b^T))
+    tmp1 = 0.5 * _lapackinv( np.trace(c)*np.identity(3) - c ) 
+    tmp2 = np.tensordot( _epsilon ,  b - np.transpose(b) )
+
+    return np.matmul(tmp1,tmp2)
+
+def conglomerateMobilityMatrixAtCentre(centres,radii):
+
+    mobility_matrix = conglomerateMobilityMatrix(centres,radii)
+    centreLocation = mobilityCentre(mobility_matrix)
+
+    # Rewrite mobility matrix in block form [[a,b],[b^T,c]]
+    a1 = mobility_matrix[:3,:3]
+    b1 = mobility_matrix[:3,3:6]
+    c1 = mobility_matrix[3:6,3:6]
+
+    # Microhydrodynamics: Principles and Selected Applications
+    # S. Kim, S Karilla
+    # 5.3.1, page 117
+
+    a2 = (a1  
+            - _epsilonVecMat( centreLocation , _epsilonMatVec( c1 , centreLocation ) )
+            - _epsilonVecMat( centreLocation, b1 ) 
+            + _epsilonMatVec( np.transpose(b1) , centreLocation)          
+          )
+    b2 = b1 + _epsilonMatVec( c1, centreLocation)
+    c2 = c1
+
+    return np.hstack(np.hstack( [[a2,b2],[np.transpose(b2),c2]] ))

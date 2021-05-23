@@ -4,13 +4,15 @@ Python port of Generalized Rotne Prager Yakamawa hydrodynamic tensors.
 
 # Original code
 
-original code in Fortran90 by Pawel Jan Zuk here:
+Original code in Fortran90 by Pawel Jan Zuk here:
 https://github.com/pjzuk/GRPY
 
 # License
 
 This software is licensed under GNU GPLv3
+
 Copyright (c) Pawel Jan Zuk (2017) - unported code.
+
 Copyright (c) Radost Waszkiewicz (2021) - python port.
 
 # How to cite
