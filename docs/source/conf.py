@@ -12,7 +12,14 @@
 #
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('../..'))
+
+# -- Project dependencies import ---------------------------------------------
+
+# Import what you need for the documented package to work
+import numpy
+import scipy
 
 
 # -- Project information -----------------------------------------------------
