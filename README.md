@@ -1,5 +1,8 @@
 # PyGYPY
+
 Python port of Generalized Rotne Prager Yakamawa hydrodynamic tensors.
+
+Now also supports jax, and jax.grad.
 
 
 # Original code

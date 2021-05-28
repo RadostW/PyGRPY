@@ -1,4 +1,4 @@
-PyGRPY 0.1 Documentation
+PyGRPY 0.0.3 Documentation
 ==================================
 
 .. toctree::
@@ -9,6 +9,8 @@ PyGRPY is a python rewrite of Generalized Rotne Prager Yakamava hydrodynamic
 tensors package avaliable on github: `GRPY <https://github.com/pjzuk/GRPY/>`_. You can use 
 it to obtain grand mobility matricies and to compute hydrodynamic sizes of 
 particles in bead approximation.
+
+New release also supports jax and jax.grad.
 
 There is an online, interactive, variant (written in javascript) that you play
 with on my website `~rwaszkiewicz/rigidmolecule <https://www.fuw.edu.pl/~rwaszkiewicz/rigidmolecule/>`_
@@ -31,4 +33,7 @@ Package contents
 .. automodule:: pygrpy.grpy_tensors
    :members:
 
-
+Experimental features -- jax support
+''''''''''''''''''''''''''''''''''''
+.. automodule:: pygrpy.jax_grpy_tensors
+   :members:
