@@ -21,31 +21,6 @@ def _transTranspose(tensor):
     """
     return jnp.transpose(tensor, [1, 0, 3, 2])
 
-
-def _epsilonVec(vec):
-    """
-    Retruns an :math:`\\epsilon_ijk v_k`, a 3x3 matrix
-    """
-
-    return jnp.array([[0, vec[2], -vec[1]], [-vec[2], 0, vec[0]], [vec[1], -vec[0], 0]])
-
-
-def _epsilonMatVec(mat, vec):
-    """
-    Returns  a_ij \\epsilon_mjk v_k
-
-    """
-    return jnp.matmul(mat, jnp.transpose(_epsilonVec(vec)))
-
-
-def _epsilonVecMat(vec, mat):
-    """
-    Returns  \\epsilon_ijk v_k a_im
-
-    """
-    return jnp.matmul(jnp.transpose(_epsilonVec(vec)), mat)
-
-
 def mu(centres, radii):
     """
     Returns grand mobility matrix in RPY approximation.
@@ -65,198 +40,112 @@ def mu(centres, radii):
         All translations before rotations, then by bead index, then by coordinate.
 
     """
-    n = len(radii)  # number of beads
-
-    # if len(centres) != len(radii):
-    #    raise ValueError('Radii array and centres array of icompatible shapes')
+    # number of beads
+    n = len(radii)
 
     displacements = centres[:, jnp.newaxis, :] - centres[jnp.newaxis, :, :]
-    rHatMatrix = jnp.zeros_like(displacements)
+    distances = jnp.sqrt(jnp.sum(displacements ** 2, axis=-1)) 
 
-    for i in range(0, n):
-        for j in range(0, n):
-            rHatMatrix = jax.lax.cond(
-                i != j,
-                lambda _: jax.ops.index_update(
-                    rHatMatrix,
-                    jax.ops.index[i, j],
-                    displacements[i, j] / jnp.linalg.norm(displacements[i, j]),
-                ),
-                lambda _: rHatMatrix,
-                (i, j),
-            )  # for i==j leave it alone
+    # shorthand for radii, consistent with publication of Zuk et al
+    a = radii 
 
-    distances = jnp.sqrt(
-        jnp.sum((centres[:, jnp.newaxis, :] - centres[jnp.newaxis, :, :]) ** 2, axis=-1)
-    )  # calculate distances with numpy magic
+    # normalized displacements and zeros for i==j
+    rHatMatrix = displacements / (distances[:,:,jnp.newaxis] + jnp.identity(n)[:,:,jnp.newaxis])
 
-    a = radii  # shorthand for radii, consistent with publication
+    # epsilonRHatMatrix_abij = rHatMatrix_abk _epsilon_ijk
+    epsilonRHatMatrix = jnp.tensordot(rHatMatrix,_epsilon,axes=([2],[2]))
 
-    # indicies: bead, bead, coord, coord
-    muTT = jnp.empty([n, n, 3, 3])  # translation-translation
-    muRR = jnp.empty([n, n, 3, 3])  # rotation-rotation
-    muRT = jnp.empty([n, n, 3, 3])  # rotation-translation coupling
+    ai = a[:,jnp.newaxis]
+    aj = a[jnp.newaxis,:]
+    
+    dist = distances + jnp.identity(n) # add identity to allow division
 
-    for i in range(0, n):
-        for j in range(0, n):
+    # prefactors of matricies for each bead pair
+    # matricies are {identity, r^hat r^hat, \\epsilon_ijk r^hat_k}
+    # these are grouped by interaction type {TT,TR,RR}
+    # and by solution branch {diagonal, close, far} for Rotne-Prager and Yakamava parts
+    # numpy magic does all operations componentwise
 
-            aSmall = jax.lax.min(radii[i], radii[j])  # pick larger and smaller bead
-            aBig = jax.lax.max(radii[i], radii[j])
+    # ### translational matricies
+    muTTidentityScaleDiag  = 1.0 / (6 * math.pi * ai)
 
-            TTidentityScale = 0.0  # scalar multiplier of id matrix
-            TTrHatScale = 0.0  # scalar multiplier of \hat{r}\hat{r} matrix
-            RRidentityScale = 0.0
-            RRrHatScale = 0.0
-            RTScale = 0.0
+    muTTidentityScaleFar   = (1.0 / (8.0 * math.pi * dist)) * (1.0 + (ai ** 2 + aj ** 2) / (3 * (dist ** 2)))
+    muTTrHatScaleFar       = (1.0 / (8.0 * math.pi * dist)) * (1.0 - (ai ** 2 + aj ** 2) / (dist ** 2))
 
-            (
-                TTidentityScale,
-                TTrHatScale,
-                RRidentityScale,
-                RRrHatScale,
-                RTScale,
-            ) = jax.lax.cond(
-                i == j,
-                lambda _: (
-                    (1.0 / (6 * math.pi * aSmall)),
-                    0.0,
-                    (1.0 / (8 * math.pi * (aSmall ** 3))),
-                    0.0,
-                    0.0,
-                ),
-                lambda _: (
-                    TTidentityScale,
-                    TTrHatScale,
-                    RRidentityScale,
-                    RRrHatScale,
-                    RTScale,
-                ),
-                operand=None,
-            )
+    muTTidentityScaleClose = (1.0 / (6.0 * math.pi * ai * aj)) * ( ( 16.0 * (dist ** 3) * (ai + aj) - ((ai - aj) ** 2 + 3 * (dist ** 2)) ** 2 ) / (32.0 * (dist ** 3)))
+    muTTrHatScaleClose     = (1.0 / (6.0 * math.pi * ai * aj)) * ( 3.0 * ((ai - aj) ** 2 - dist ** 2) ** 2 / (32.0 * (dist ** 3)))
 
-            (
-                TTidentityScale,
-                TTrHatScale,
-                RRidentityScale,
-                RRrHatScale,
-                RTScale,
-            ) = jax.lax.cond(
-                jnp.bitwise_and(distances[i][j] > a[i] + a[j], jnp.bitwise_not(i == j)),
-                lambda _: (
-                    (1.0 / (8.0 * math.pi * distances[i][j]))
-                    * (1.0 + (a[i] ** 2 + a[j] ** 2) / (3 * (distances[i][j] ** 2))),
-                    (1.0 / (8.0 * math.pi * distances[i][j]))
-                    * (1.0 - (a[i] ** 2 + a[j] ** 2) / (distances[i][j] ** 2)),
-                    (-1.0 / (16.0 * math.pi * (distances[i][j] ** 3))),
-                    (1.0 / (16.0 * math.pi * (distances[i][j] ** 3))) * 3,
-                    (1.0 / (8 * math.pi * (distances[i][j] ** 2))),
-                ),
-                lambda _: (
-                    TTidentityScale,
-                    TTrHatScale,
-                    RRidentityScale,
-                    RRrHatScale,
-                    RTScale,
-                ),
-                operand=None,
-            )
+    # ### rotational matricies
+    muRRidentityScaleDiag  = 1.0 / (8 * math.pi * (ai ** 3))
 
-            mathcalA = (
-                5.0 * (distances[i][j] ** 6)
-                - 27.0 * (distances[i][j] ** 4) * (a[i] ** 2 + a[j] ** 2)
-                + 32.0 * (distances[i][j] ** 3) * (a[i] ** 3 + a[j] ** 3)
-                - 9.0 * (distances[i][j] ** 2) * ((a[i] ** 2 - a[j] ** 2) ** 2)
-                - ((a[i] - a[j]) ** 4) * (a[i] ** 2 + 4 * a[j] * a[i] + a[j] ** 2)
-            ) / (64.0 * (distances[i][j] ** 3))
-            mathcalB = (
+    muRRidentityScaleFar   = -1.0 / (16.0 * math.pi * (dist ** 3))
+    muRRrHatScaleFar       = (1.0 / (16.0 * math.pi * (dist ** 3))) * 3.0
+
+    # convenience matrix, consistent with publication of Zuk et al
+    mathcalA = (
+                5.0 * (dist ** 6)
+                - 27.0 * (dist ** 4) * (ai ** 2 + aj ** 2)
+                + 32.0 * (dist ** 3) * (ai ** 3 + aj ** 3)
+                - 9.0 * (dist ** 2) * ((ai ** 2 - aj ** 2) ** 2)
+                - ((ai - aj) ** 4) * (ai ** 2 + 4 * aj * ai + aj ** 2)
+            ) / (64.0 * (dist ** 3))
+    mathcalB = (
                 3.0
-                * (((a[i] - a[j]) ** 2 - distances[i][j] ** 2) ** 2)
-                * (a[i] ** 2 + 4.0 * a[i] * a[j] + a[j] ** 2 - distances[i][j] ** 2)
-            ) / (64.0 * (distances[i][j] ** 3))
+                * (((ai - aj) ** 2 - dist ** 2) ** 2)
+                * (ai ** 2 + 4.0 * ai * aj + aj ** 2 - dist ** 2)
+            ) / (64.0 * (dist ** 3))
 
-            (
-                TTidentityScale,
-                TTrHatScale,
-                RRidentityScale,
-                RRrHatScale,
-                RTScale,
-            ) = jax.lax.cond(
-                jnp.bitwise_and(
-                    distances[i][j] > aBig - aSmall,
-                    jnp.bitwise_and(
-                        distances[i][j] <= a[i] + a[j],
-                        jnp.bitwise_and(
-                            jnp.bitwise_not(distances[i][j] > a[i] + a[j]),
-                            jnp.bitwise_not(i == j),
-                        ),
-                    ),
-                ),
-                lambda _: (
-                    (1.0 / (6.0 * math.pi * a[i] * a[j]))
-                    * (
-                        (
-                            16.0 * (distances[i][j] ** 3) * (a[i] + a[j])
-                            - ((a[i] - a[j]) ** 2 + 3 * (distances[i][j] ** 2)) ** 2
-                        )
-                        / (32.0 * (distances[i][j] ** 3))
-                    ),
-                    (1.0 / (6.0 * math.pi * a[i] * a[j]))
-                    * (
-                        3
-                        * ((a[i] - a[j]) ** 2 - distances[i][j] ** 2) ** 2
-                        / (32 * (distances[i][j] ** 3))
-                    ),
-                    (1.0 / (8.0 * math.pi * (a[i] ** 3) * (a[j] ** 3))) * mathcalA,
-                    (1.0 / (8.0 * math.pi * (a[i] ** 3) * (a[j] ** 3))) * mathcalB,
-                    (1.0 / (16.0 * math.pi * (a[j] ** 3) * a[i]))
-                    * (
-                        (
-                            ((a[j] - a[i] + distances[i][j]) ** 2)
-                            * (
-                                a[i] ** 2
-                                + 2.0 * a[i] * (a[j] + distances[i][j])
-                                - 3.0 * ((a[j] - distances[i][j]) ** 2)
-                            )
-                        )
-                        / (8.0 * (distances[i][j] ** 2))
-                    ),
-                ),
-                lambda _: (
-                    TTidentityScale,
-                    TTrHatScale,
-                    RRidentityScale,
-                    RRrHatScale,
-                    RTScale,
-                ),
-                operand=None,
-            )
+    muRRidentityScaleClose = (1.0 / (8.0 * math.pi * (ai ** 3) * (aj ** 3))) * mathcalA
+    muRRrHatScaleClose     = (1.0 / (8.0 * math.pi * (ai ** 3) * (aj ** 3))) * mathcalB
 
-            #### TODO #### One bead entirely inside another
+    # ### coupling matricies
+    muRTScaleDiag          = 0.0
 
-            # GRPY approximation is of form scalar * matrix + scalar * matrix
-            muTT = jax.ops.index_update(
-                muTT,
-                jax.ops.index[i, j, :, :],
-                TTidentityScale * jnp.identity(3)
-                + TTrHatScale * jnp.outer(rHatMatrix[i][j], rHatMatrix[i][j]),
-            )
-            muRR = jax.ops.index_update(
-                muRR,
-                jax.ops.index[i, j, :, :],
-                RRidentityScale * jnp.identity(3)
-                + RRrHatScale * jnp.outer(rHatMatrix[i][j], rHatMatrix[i][j]),
-            )
-            muRT = jax.ops.index_update(
-                muRT, jax.ops.index[i, j, :, :], RTScale * _epsilonVec(rHatMatrix[i][j])
-            )
+    muRTScaleFar           = 1.0 / (8 * math.pi * (dist ** 2))
 
+    muRTScaleClose         = (1.0 / (16.0 * math.pi * (aj ** 3) * ai)) * ( ( ((aj - ai + dist) ** 2) * ( ai ** 2 + 2.0 * ai * (aj + dist) - 3.0 * ((aj - dist) ** 2))) / (8.0 * (dist ** 2)) )
+
+    # solution branch indicators
+    isFar = 1.0*(dist > ai + aj)
+    isDiag = 1.0*(jnp.identity(n))
+
+    # combine scale factors from branches
+    muTTidentityScale = isDiag * muTTidentityScaleDiag + (1.0 - isDiag) * (isFar * muTTidentityScaleFar + (1.0 - isFar) * muTTidentityScaleClose)
+    muTTrHatScale = (1.0 - isDiag) * (isFar * muTTrHatScaleFar + (1.0-isFar) * muTTrHatScaleClose)
+
+    muRRidentityScale = isDiag * muRRidentityScaleDiag + (1.0 - isDiag) * (isFar * muRRidentityScaleFar + (1.0 - isFar) * muRRidentityScaleClose)
+    muRRrHatScale = (1.0 - isDiag) * (isFar * muRRrHatScaleFar + (1.0 - isFar) * muRRrHatScaleClose)
+
+    muRTScale = (1.0 - isDiag) * (isFar * muRTScaleFar + (1.0 - isFar) * muRTScaleClose)
+
+    # construct large matricies
+    muTT = (
+                muTTidentityScale[:,:,jnp.newaxis,jnp.newaxis] * jnp.identity(3)[jnp.newaxis,jnp.newaxis,:,:] 
+                + muTTrHatScale[:,:,jnp.newaxis,jnp.newaxis] * rHatMatrix[:,:,jnp.newaxis,:] * rHatMatrix[:,:,:,jnp.newaxis]
+           )
+    muRR = (
+                muRRidentityScale[:,:,jnp.newaxis,jnp.newaxis] * jnp.identity(3)[jnp.newaxis,jnp.newaxis,:,:] 
+                + muRRrHatScale[:,:,jnp.newaxis,jnp.newaxis] * rHatMatrix[:,:,jnp.newaxis,:] * rHatMatrix[:,:,:,jnp.newaxis]
+           )
+    muRT = (
+                muRTScale[:,:,jnp.newaxis,jnp.newaxis] * epsilonRHatMatrix[:,:,:,:]
+           )
+
+
+    # Shape can't depend on arguments in jax
     # if blockmatrix:
     #    return jnp.array([[muTT,muRT],[_transTranspose(muRT),muRR]])
     # else:
+
+
     return jnp.hstack(
         jnp.hstack(
             jnp.hstack(
-                jnp.hstack(jnp.array([[muTT, muRT], [_transTranspose(muRT), muRR]]))
+                jnp.hstack(
+                    jnp.array(
+                        [[muTT, muRT], [_transTranspose(muRT), muRR]]
+                    )
+                )
             )
         )
     )
