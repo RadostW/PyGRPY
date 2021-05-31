@@ -8,9 +8,9 @@ import json
 
 _epsilon = jnp.array(
     [
-        [[0.0, 0, 0], [0, 0, 1], [0, -1, 0]],
-        [[0, 0, -1], [0, 0, 0], [1, 0, 0]],
-        [[0, 1, 0], [-1, 0, 0], [0, 0, 0]],
+        [[0.0, 0.0,  0.0], [0.0,  0.0, 1.0], [0.0, -1.0, 0.0]],
+        [[0.0, 0.0, -1.0], [0.0,  0.0, 0.0], [1.0, 0.0,  0.0]],
+        [[0.0, 1.0,  0.0], [-1.0, 0.0, 0.0], [0.0, 0.0,  0.0]],
     ]
 )  # levi-civita(3)
 
@@ -35,9 +35,22 @@ def mu(centres, radii):
     Returns
     -------
     jnp.array
-        A ``6N`` by ``6N`` array containing translational mobility coefficients
+        A ``6N`` by ``6N`` array containing translational and rotational mobility coefficients
         of the beads. Indicies are ordered: ``ux1,uy1,uz1,  ux2,uy2,uz2, ..., wx1,wy1,wz1, ...```.
         All translations before rotations, then by bead index, then by coordinate.
+
+    Example
+    -------
+    >>> import jax
+    >>> import jax.numpy as jnp
+    >>> import pygrpy.jax_grpy_tensors
+    >>> centres = jnp.array([[0,0,0],[0,0,1]])
+    >>> radii = jnp.array([1,1])
+    >>> pygrpy.jax_grpy_tensors.mu(centres,radii).shape()
+    (12,12)
+    >>> fast_mu = jax.jit(pygrpy.jax_grpy_tensors.mu)
+    >>> fast_mu(centres,radii).shape #compiled variant of mu
+    (12,12)
 
     """
     # number of beads
