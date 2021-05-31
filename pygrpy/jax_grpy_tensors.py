@@ -150,3 +150,73 @@ def mu(centres, radii):
         (6*n,6*n),
         dimensions = (0,2,4,1,3,5)
     )
+
+
+def muTT(centres,radii):
+    """
+    Returns grand mobility matrix in RPY approximation.
+
+    Parameters
+    ----------
+    centers: jnp.array
+        An ``N`` by 3 array describing locations of centres of ``N`` beads.
+    radii: jnp.array
+        An array of length ``N`` describing sizes of ``N`` beads.
+
+    Returns
+    -------
+    jnp.array
+        A ``3N`` by ``3N`` array containing translational mobility coefficients
+        of the beads. Indicies are ordered: ``ux1,uy1,uz1,  ux2,uy2,uz2, ...,```.
+        by bead index, then by coordinate.
+    """
+
+    # number of beads
+    n = len(radii)
+
+    displacements = centres[:, jnp.newaxis, :] - centres[jnp.newaxis, :, :]
+    distances = jnp.sqrt(jnp.sum(displacements ** 2, axis=-1)) 
+
+    # shorthand for radii, consistent with publication of Zuk et al
+    a = radii 
+
+    # normalized displacements and zeros for i==j
+    rHatMatrix = displacements / (distances[:,:,jnp.newaxis] + jnp.identity(n)[:,:,jnp.newaxis])
+
+    ai = a[:,jnp.newaxis]
+    aj = a[jnp.newaxis,:]
+    
+    dist = distances + jnp.identity(n) # add identity to allow division
+
+    # prefactors of matricies for each bead pair
+    # matricies are {identity, r^hat r^hat, \\epsilon_ijk r^hat_k}
+    # these are grouped by interaction type {TT,TR,RR}
+    # and by solution branch {diagonal, close, far} for Rotne-Prager and Yakamava parts
+    # numpy magic does all operations componentwise
+
+    # ### translational matricies
+    muTTidentityScaleDiag  = 1.0 / (6 * math.pi * ai)
+
+    muTTidentityScaleFar   = (1.0 / (8.0 * math.pi * dist)) * (1.0 + (ai ** 2 + aj ** 2) / (3 * (dist ** 2)))
+    muTTrHatScaleFar       = (1.0 / (8.0 * math.pi * dist)) * (1.0 - (ai ** 2 + aj ** 2) / (dist ** 2))
+
+    # solution branch indicators
+    isFar = 1.0*(dist > ai + aj)
+    isDiag = 1.0*(jnp.identity(n))
+
+    # combine scale factors from branches
+    muTTidentityScale = isDiag * muTTidentityScaleDiag + (1.0 - isDiag) * (isFar * muTTidentityScaleFar + (1.0 - isFar) * muTTidentityScaleClose)
+    muTTrHatScale = (1.0 - isDiag) * (isFar * muTTrHatScaleFar + (1.0-isFar) * muTTrHatScaleClose)
+
+    # construct large matricies
+    muTT = (
+                muTTidentityScale[:,:,jnp.newaxis,jnp.newaxis] * jnp.identity(3)[jnp.newaxis,jnp.newaxis,:,:] 
+                + muTTrHatScale[:,:,jnp.newaxis,jnp.newaxis] * rHatMatrix[:,:,jnp.newaxis,:] * rHatMatrix[:,:,:,jnp.newaxis]
+           )
+    # flatten (n,n,3,3) tensor in the correct order
+    return jax.lax.reshape(
+        muTT,
+        (3*n,3*n),
+        dimensions = (0,2,1,3)
+    )
+
