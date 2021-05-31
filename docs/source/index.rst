@@ -1,4 +1,4 @@
-PyGRPY 0.0.3 Documentation
+PyGRPY Documentation
 ==================================
 
 .. toctree::
