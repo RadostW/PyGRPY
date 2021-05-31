@@ -131,21 +131,9 @@ def mu(centres, radii):
                 muRTScale[:,:,jnp.newaxis,jnp.newaxis] * epsilonRHatMatrix[:,:,:,:]
            )
 
-
-    # Shape can't depend on arguments in jax
-    # if blockmatrix:
-    #    return jnp.array([[muTT,muRT],[_transTranspose(muRT),muRR]])
-    # else:
-
-
-    return jnp.hstack(
-        jnp.hstack(
-            jnp.hstack(
-                jnp.hstack(
-                    jnp.array(
-                        [[muTT, muRT], [_transTranspose(muRT), muRR]]
-                    )
-                )
-            )
-        )
+    # flatten (2,2,n,n,3,3) tensor in the correct order
+    return jax.lax.reshape(
+        jnp.array([[muTT,muRT],[_transTranspose(muRT),muRR]]),
+        (6*n,6*n),
+        dimensions = (0,2,4,1,3,5)
     )
