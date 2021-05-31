@@ -34,6 +34,8 @@ gmm_two = jnp.array(
                 ]
                 )
 
+gmm_two_tt = gmm_two[:6,:6]
+
 gmm_four = jnp.array([
                                         [0.05305164769729845,0,0,0.03813087178243326,0,0,0.023210095867568073,0,0,0.014245349844644952,0,0,0,0,0,0,-0.012433979929054324,0,0,-0.009947183943243459,0,0,-0.004420970641441538,0],
                                         [0,0.05305164769729845,0,0,0.03813087178243326,0,0,0.023210095867568073,0,0,0.014245349844644952,0,0,0,0,0.012433979929054324,0,0,0.009947183943243459,0,0,0.004420970641441538,0,0],
@@ -79,7 +81,7 @@ def test_mobility_two_beads():
 
     #assert type(testmu) == jnp.ndarray , 'grpy_tesnors.mu should return jnp.array.'
     #print(json.dumps((testmu - gmm_two).tolist()))
-    assert jnp.allclose(testmu, gmm_two) ,  'grpy_tesnors.mu for four beads should return specified value.'
+    assert jnp.allclose(testmu, gmm_two) ,  'grpy_tesnors.mu for two beads should return specified value.'
 
 def test_mobility_four_beads():
     testmu = pygrpy.jax_grpy_tensors.mu(centres_four,sizes_four)
@@ -117,6 +119,12 @@ def test_jit_mobility_manybeads_1000_repeats_10():
     for i in range(0,t):
         testmu = fastmuB( centres , sizes )
 
+def test_muTT_two_beads():
+    testmu = pygrpy.jax_grpy_tensors.muTT(centres_two,sizes_two)
+
+    #assert type(testmu) == jnp.ndarray , 'grpy_tesnors.mu should return jnp.array.'
+    #print(json.dumps((testmu - gmm_two).tolist()))
+    assert jnp.allclose(testmu, gmm_two_tt) ,  'grpy_tesnors.muTT for two beads should return specified value.'
 
 def test_jit():
     fastmuC = jax.jit(pygrpy.jax_grpy_tensors.mu)

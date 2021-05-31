@@ -200,6 +200,9 @@ def muTT(centres,radii):
     muTTidentityScaleFar   = (1.0 / (8.0 * math.pi * dist)) * (1.0 + (ai ** 2 + aj ** 2) / (3 * (dist ** 2)))
     muTTrHatScaleFar       = (1.0 / (8.0 * math.pi * dist)) * (1.0 - (ai ** 2 + aj ** 2) / (dist ** 2))
 
+    muTTidentityScaleClose = (1.0 / (6.0 * math.pi * ai * aj)) * ( ( 16.0 * (dist ** 3) * (ai + aj) - ((ai - aj) ** 2 + 3 * (dist ** 2)) ** 2 ) / (32.0 * (dist ** 3)))
+    muTTrHatScaleClose     = (1.0 / (6.0 * math.pi * ai * aj)) * ( 3.0 * ((ai - aj) ** 2 - dist ** 2) ** 2 / (32.0 * (dist ** 3)))
+
     # solution branch indicators
     isFar = 1.0*(dist > ai + aj)
     isDiag = 1.0*(jnp.identity(n))
