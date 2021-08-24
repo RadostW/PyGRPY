@@ -195,21 +195,24 @@ def muTT(centres,radii):
     # numpy magic does all operations componentwise
 
     # ### translational matricies
-    muTTidentityScaleDiag  = 1.0 / (6 * math.pi * ai)
+    muTTidentityScaleDiag   = 1.0 / (6 * math.pi * ai)
 
-    muTTidentityScaleFar   = (1.0 / (8.0 * math.pi * dist)) * (1.0 + (ai ** 2 + aj ** 2) / (3 * (dist ** 2)))
-    muTTrHatScaleFar       = (1.0 / (8.0 * math.pi * dist)) * (1.0 - (ai ** 2 + aj ** 2) / (dist ** 2))
+    muTTidentityScaleFar    = (1.0 / (8.0 * math.pi * dist)) * (1.0 + (ai ** 2 + aj ** 2) / (3 * (dist ** 2)))
+    muTTrHatScaleFar        = (1.0 / (8.0 * math.pi * dist)) * (1.0 - (ai ** 2 + aj ** 2) / (dist ** 2))
 
-    muTTidentityScaleClose = (1.0 / (6.0 * math.pi * ai * aj)) * ( ( 16.0 * (dist ** 3) * (ai + aj) - ((ai - aj) ** 2 + 3 * (dist ** 2)) ** 2 ) / (32.0 * (dist ** 3)))
-    muTTrHatScaleClose     = (1.0 / (6.0 * math.pi * ai * aj)) * ( 3.0 * ((ai - aj) ** 2 - dist ** 2) ** 2 / (32.0 * (dist ** 3)))
+    muTTidentityScaleClose  = (1.0 / (6.0 * math.pi * ai * aj)) * ( ( 16.0 * (dist ** 3) * (ai + aj) - ((ai - aj) ** 2 + 3 * (dist ** 2)) ** 2 ) / (32.0 * (dist ** 3)))
+    muTTrHatScaleClose      = (1.0 / (6.0 * math.pi * ai * aj)) * ( 3.0 * ((ai - aj) ** 2 - dist ** 2) ** 2 / (32.0 * (dist ** 3)))
+
+    muTTidentityScaleInside = (1.0 / (6.0 * math.pi * jnp.maximum(ai,aj)))
 
     # solution branch indicators
     isFar = 1.0*(dist > ai + aj)
+    isOutside = 1.0*(dist > jnp.maximum(ai,aj) - jnp.minimum(ai,aj))
     isDiag = 1.0*(jnp.identity(n))
 
     # combine scale factors from branches
-    muTTidentityScale = isDiag * muTTidentityScaleDiag + (1.0 - isDiag) * (isFar * muTTidentityScaleFar + (1.0 - isFar) * muTTidentityScaleClose)
-    muTTrHatScale = (1.0 - isDiag) * (isFar * muTTrHatScaleFar + (1.0-isFar) * muTTrHatScaleClose)
+    muTTidentityScale = isDiag * muTTidentityScaleDiag + (1.0 - isDiag) * (isOutside * (isFar * muTTidentityScaleFar + (1.0 - isFar) * muTTidentityScaleClose) + (1.0-isOutside) * muTTidentityScaleInside)
+    muTTrHatScale = isOutside * ((1.0 - isDiag) * (isFar * muTTrHatScaleFar + (1.0-isFar) * muTTrHatScaleClose))
 
     # construct large matricies
     muTT = (
