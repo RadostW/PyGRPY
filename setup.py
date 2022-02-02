@@ -4,7 +4,7 @@ with open('README.md') as f:
     long_description = f.read()
 
 setup(name='PyGRPY',
-      version='0.0.8',
+      version='0.1.0',
       description='Python port of Generalized Rotne Prager Yakamava tensors',
       url='https://github.com/RadostW/PyGRPY/',
       author='Radost Waszkiewicz',
