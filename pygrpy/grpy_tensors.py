@@ -274,11 +274,7 @@ def muTT(centres,radii):
                 + muTTrHatScale[:,:,np.newaxis,np.newaxis] * rHatMatrix[:,:,np.newaxis,:] * rHatMatrix[:,:,:,np.newaxis]
            )
     # flatten (n,n,3,3) tensor in the correct order
-    return jax.lax.reshape(
-        muTT,
-        (3*n,3*n),
-        dimensions = (0,2,1,3)
-    )
+    return muTT
         
 
 def conglomerateMobilityMatrix(centres,radii):
