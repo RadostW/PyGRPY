@@ -6,7 +6,7 @@ with open('README.md') as f:
 setup(name='PyGRPY',
       version='0.0.8',
       description='Python port of Generalized Rotne Prager Yakamava tensors',
-      url='https://github.com/RadostW/PyGYPY/',
+      url='https://github.com/RadostW/PyGRPY/',
       author='Radost Waszkiewicz',
       author_email='radost.waszkiewicz@gmail.com',
       long_description=long_description,
