@@ -12,8 +12,8 @@ setup(name='PyGRPY',
       long_description=long_description,
       long_description_content_type='text/markdown',  # This is important!
       project_urls = {
-          'Documentation': 'https://pygypy.readthedocs.io',
-          'Source': 'https://github.com/RadostW/PyGYPY/'
+          'Documentation': 'https://pygrpy.readthedocs.io',
+          'Source': 'https://github.com/RadostW/PyGRPY/'
       },
       license='GNU GPLv3',
       packages=['pygrpy'],

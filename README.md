@@ -1,4 +1,4 @@
-# PyGYPY
+# PyGRPY
 
 Python port of Generalized Rotne Prager Yakamawa hydrodynamic tensors.
 
