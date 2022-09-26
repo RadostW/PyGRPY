@@ -39,7 +39,7 @@ copyright = '2021, Radost Waszkiewicz'
 author = 'Radost Waszkiewicz'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.3'
+release = '0.1.1'
 
 
 # Configuration file for the Sphinx documentation builder.
