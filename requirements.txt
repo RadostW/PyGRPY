@@ -1,5 +1,5 @@
 numpy>=1.19
-scipy==1.5.4
+scipy>=1.5.4
 
-jax==0.2.13
-jaxlib==0.1.66
+jax>=0.2.13
+jaxlib>=0.1.66
