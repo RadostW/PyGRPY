@@ -1,3 +1,5 @@
+![Tests](https://github.com/RadostW/PyGRPY/actions/workflows/tests.yml/badge.svg)
+
 # PyGRPY
 
 Python port of Generalized Rotne Prager Yakamawa hydrodynamic tensors.
