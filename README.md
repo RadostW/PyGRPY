@@ -22,5 +22,8 @@ Copyright (c) Radost Waszkiewicz (2021) - python port.
 
 # How to cite
 
+Waszkiewicz, R., Bartczak M., Kolasa K. and Lisicki M. *Pychastic: Precise Brownian Dynamics using 
+Taylor-Ito integrators in Python*; Sci-Post (submitted) (2022)
+
 Zuk, P. J., B. Cichocki, and P. Szymczak *GRPY - an accurate bead method for calculation of hydrodynamic
 properties of rigid biomacromolecules*; Biophys. J. (submitted) (2017)
