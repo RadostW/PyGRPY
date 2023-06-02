@@ -137,8 +137,15 @@ def test_hydrosize():
     testsize = pygrpy.grpy.stokesRadius(centres_four,sizes_four)
     assert np.allclose(testsize, 1.5409546371938094)
 
+def test_fast_trace():
+    slow_mu = pygrpy.grpy_tensors.muTT(centres_four,sizes_four)
+    slow_trace_mu = np.trace(slow_mu, axis1=-2, axis2=-1)
+    fast_trace_mu = pygrpy.grpy_tensors.muTT_trace(centres_four,sizes_four)
+    assert np.allclose(slow_trace_mu, fast_trace_mu)
+
 if __name__ == "__main__":
     test_mobility_single_bead()
     test_mobility_two_beads()
     test_mobility_four_beads()  
     test_projection_four_beads()  
+    test_fast_trace()

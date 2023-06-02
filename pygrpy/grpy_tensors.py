@@ -275,7 +275,72 @@ def muTT(centres,radii):
            )
     # flatten (n,n,3,3) tensor in the correct order
     return muTT
-        
+
+def muTT_trace(centres,radii):
+    """
+    Returns beadwise trace of grand mobility matrix in RPY approximation.
+
+    Parameters
+    ----------
+    centers: np.array
+        An ``N`` by 3 array describing locations of centres of ``N`` beads.
+    radii: np.array
+        An array of length ``N`` describing sizes of ``N`` beads.
+
+    Returns
+    -------
+    np.array
+        A ``N`` by ``N`` array containing traces of translational mobility coefficients
+        of the beads.
+    """
+
+    # number of beads
+    n = len(radii)
+
+    displacements = centres[:, np.newaxis, :] - centres[np.newaxis, :, :]
+    distances = np.sqrt(np.sum(displacements ** 2, axis=-1)) 
+
+    # shorthand for radii, consistent with publication of Zuk et al
+    a = radii 
+    
+    ai = a[:,np.newaxis]
+    aj = a[np.newaxis,:]
+    
+    dist = distances + np.identity(n) # add identity to allow division
+
+    # prefactors of matricies for each bead pair
+    # matricies are {identity, r^hat r^hat, \\epsilon_ijk r^hat_k}
+    # these are grouped by interaction type {TT,TR,RR}
+    # and by solution branch {diagonal, close, far} for Rotne-Prager and Yakamava parts
+    # numpy magic does all operations componentwise
+
+    # ### translational matricies
+    muTTidentityScaleDiag   = 1.0 / (6 * math.pi * ai)
+
+    muTTidentityScaleFar    = (1.0 / (8.0 * math.pi * dist)) * (1.0 + (ai ** 2 + aj ** 2) / (3 * (dist ** 2)))
+    muTTrHatScaleFar        = (1.0 / (8.0 * math.pi * dist)) * (1.0 - (ai ** 2 + aj ** 2) / (dist ** 2))
+
+    muTTidentityScaleClose  = (1.0 / (6.0 * math.pi * ai * aj)) * ( ( 16.0 * (dist ** 3) * (ai + aj) - ((ai - aj) ** 2 + 3 * (dist ** 2)) ** 2 ) / (32.0 * (dist ** 3)))
+    muTTrHatScaleClose      = (1.0 / (6.0 * math.pi * ai * aj)) * ( 3.0 * ((ai - aj) ** 2 - dist ** 2) ** 2 / (32.0 * (dist ** 3)))
+
+    muTTidentityScaleInside = (1.0 / (6.0 * math.pi * np.maximum(ai,aj)))
+
+    # solution branch indicators
+    isFar = 1.0*(dist > ai + aj)
+    isOutside = 1.0*(dist > np.maximum(ai,aj) - np.minimum(ai,aj))
+    isDiag = 1.0*(np.identity(n))
+
+    # combine scale factors from branches
+    muTTidentityScale = isDiag * muTTidentityScaleDiag + (1.0 - isDiag) * (isOutside * (isFar * muTTidentityScaleFar + (1.0 - isFar) * muTTidentityScaleClose) + (1.0-isOutside) * muTTidentityScaleInside)
+    muTTrHatScale = isOutside * ((1.0 - isDiag) * (isFar * muTTrHatScaleFar + (1.0-isFar) * muTTrHatScaleClose))
+
+    # construct large matricies
+    ret_muTT_trace = (
+                3 *muTTidentityScale[:,:] 
+                + muTTrHatScale[:,:]
+           )
+    # flatten (n,n,3,3) tensor in the correct order
+    return ret_muTT_trace
 
 def conglomerateMobilityMatrix(centres,radii):
     '''
