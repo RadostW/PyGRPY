@@ -9,12 +9,12 @@ sphinxcontrib-napoleon==0.7
 sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.5
 
-numpy==1.20.3
-scipy==1.5.4
+numpy>=1.20.3
+scipy>=1.5.4
 
-jax==0.2.13
-jaxlib==0.1.67
+jax>=0.2.13
+#jaxlib
 
-docutils==0.16
+docutils>=0.16
 
 #PyGRPY==0.0.2
