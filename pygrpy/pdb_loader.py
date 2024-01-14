@@ -12,12 +12,17 @@ def get_pdb_from_pdb(pdb_id, pdb_download_server="https://files.rcsb.org/downloa
     """
     Fetches the PDB file of a given PDB ID.
 
-    Parameters:
-    - pdb_id (str): The PDB ID of the protein.
-    - pdb_download_server (str) [optional]: The address of the pdb server
+    Parameters
+    ----------
+    pdb_id: str
+        The PDB ID of the protein.
+    pdb_download_server: str [optional]
+        The address of the pdb server
 
-    Returns:
-    str or None: The PDB file content as a string if successful, None otherwise.
+    Returns
+    -------
+    str or None
+        The PDB file content as a string if successful, None otherwise.
     """
 
     pdb_url = pdb_download_server + pdb_id + ".pdb"
@@ -39,12 +44,17 @@ def get_pdb_from_alphafold(
     """
     Fetches the PDB file from AlphaFold for a given UniProt ID.
 
-    Parameters:
-    - uniprot (str): The UniProt ID of the protein.
-    - alphafold_download_server (str) [optional]: The address of the alphafold server.
+    Parameters
+    ----------
+    uniprot: str
+        The UniProt ID of the protein.
+    alphafold_download_server: str [optional]
+        The address of the alphafold server.
 
-    Returns:
-    str or None: The PDB file content as a string if successful, None otherwise.
+    Returns
+    -------
+    str or None
+        The PDB file content as a string if successful, None otherwise.
     """
 
     alphafold_url = alphafold_download_server + uniprot
@@ -103,18 +113,23 @@ def centres_and_radii(pdb_string):
     """
     Extracts the coordinates and radii of C-alpha atoms from a PDB file string.
 
-    Parameters:
-    - pdb_string (str): The PDB file content as a string.
+    Parameters
+    ----------
+    pdb_string: str
+        The PDB file content as a string.
 
-    Returns:
-    tuple: A tuple containing the C-alpha atom coordinates (numpy array) and their corresponding radii (list).
+    Returns
+    -------
+    tuple
+        A tuple containing the C-alpha atom coordinates (np.array) and their corresponding radii (np.array).
 
-    Examples:
+    Examples
+    --------
     >>> # Lysozyme C structure
     >>> pdb_content = get_pdb_from_alphafold("P61626")
     >>> coordinates, radii = centres_and_radii(pdb_content)
     >>> print(stokesRadius(coordinates, radii))
-    >>>
+    
     >>> # Lysozyme C structure
     >>> pdb_content = get_pdb_from_alphafold("P61626")
     >>> coordinates, radii = centres_and_radii(pdb_content)
