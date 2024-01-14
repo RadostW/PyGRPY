@@ -114,7 +114,7 @@ def centres_and_radii(pdb_string):
     >>> pdb_content = get_pdb_from_alphafold("P61626")
     >>> coordinates, radii = centres_and_radii(pdb_content)
     >>> print(stokesRadius(coordinates, radii))
-
+    >>>
     >>> # Lysozyme C structure
     >>> pdb_content = get_pdb_from_alphafold("P61626")
     >>> coordinates, radii = centres_and_radii(pdb_content)
