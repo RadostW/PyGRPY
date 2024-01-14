@@ -2,7 +2,6 @@ import math
 import numpy as np
 import scipy as sp
 import scipy.linalg
-import json
 
 _epsilon = np.array([[[0,0,0],[0,0,1],[0,-1,0]],[[0,0,-1],[0,0,0],[1,0,0]],[[0,1,0],[-1,0,0],[0,0,0]]]) #levi-civita(3)
 
