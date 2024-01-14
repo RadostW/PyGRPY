@@ -41,6 +41,9 @@ Package contents
 .. automodule:: pygrpy.grpy_tensors
    :members:
 
+.. automodule:: pygrpy.pdb_loader
+   :members:
+
 Experimental features -- jax support
 ''''''''''''''''''''''''''''''''''''
 .. automodule:: pygrpy.jax_grpy_tensors
@@ -70,6 +73,28 @@ Example use
     if __name__ == "__main__":
         test_hydrosize()
 
+.. prompt:: python >>> auto
+    
+    # Copyright (C) Radost Waszkiewicz 2024
+    # This software is distributed under MIT license
+    # Load shape of Lysozyme-C from different databases. Compare hydrodynamic size
+
+    import pygrpy.pdb_loader
+    import pygrpy.grpy
+
+    pdb_content = pygrpy.pdb_loader.get_pdb_from_alphafold("P61626")
+    coordinates, radii = pygrpy.pdb_loader.centres_and_radii(pdb_content)
+    alphafold_size = pygrpy.grpy.stokesRadius(coordinates, radii)
+
+    pdb_content = pygrpy.pdb_loader.get_pdb_from_pdb("253L")
+    coordinates, radii = pygrpy.pdb_loader.centres_and_radii(pdb_content)
+    pdb_size = pygrpy.grpy.stokesRadius(coordinates, radii)
+
+    print("Alphafold size [Ang]:")
+    print(alphafold_size)
+    print("Protein Data Bank size [Ang]:")
+    print(pdb_size)
+    
 
 .. prompt:: python >>> auto
 
