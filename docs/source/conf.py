@@ -23,6 +23,8 @@ _pysrc = os.path.abspath(os.path.join(os.path.abspath(__file__), '..', '..', '..
 sys.path.insert(0, _pysrc)
 # Now we can import local modules.
 import pygrpy
+import pygrpy.pdb_loader
+import pygrpy.jax_grpy_tensors
 
 
 # -- Project dependencies import ---------------------------------------------
@@ -30,7 +32,7 @@ import pygrpy
 # Import what you need for the documented package to work
 import numpy
 import scipy
-
+import MDAnalysis
 
 # -- Project information -----------------------------------------------------
 
