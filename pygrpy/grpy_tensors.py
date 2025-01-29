@@ -137,7 +137,7 @@ def mu(centres,radii,blockmatrix = False):
     #indicies: bead, bead, coord, coord
     muTT = np.empty([n,n,3,3]) #translation-translation
     muRR = np.empty([n,n,3,3]) #rotation-rotation
-    muRT = np.empty([n,n,3,3]) #rotation-translation coupling
+    muTR = np.empty([n,n,3,3]) #translation-rotation coupling
 
     for i in range(0,n):
         for j in range(0,n):    
@@ -157,8 +157,8 @@ def mu(centres,radii,blockmatrix = False):
                 RRidentityScale = (1.0 / (8 * math.pi * (aSmall**3)))
                 RRrHatScale = 0.0
                 
-                # Rotation-translation
-                RTScale = 0.0
+                # Translation-rotation
+                TRScale = 0.0
 
             elif distances[i][j] > a[i]+a[j]: #Far apart
                 # Translation-translation
@@ -169,8 +169,8 @@ def mu(centres,radii,blockmatrix = False):
                 RRidentityScale = (-1.0 / (16.0 * math.pi * (distances[i][j]**3)))
                 RRrHatScale = (1.0 / (16.0 * math.pi * (distances[i][j]**3)))*3
                 
-                # Rotation-translation
-                RTScale = (1.0 / (8 * math.pi * (distances[i][j]**2) ))
+                # Translation-rotation
+                TRScale = (1.0 / (8 * math.pi * (distances[i][j]**2) ))
 
             elif distances[i][j] > aBig - aSmall and distances[i][j] <= a[i]+a[j]: #Close together
                 # Translation-translation
@@ -187,8 +187,8 @@ def mu(centres,radii,blockmatrix = False):
                 RRidentityScale = (1.0 / (8.0 * math.pi * (a[i]**3) * (a[j]**3))) * mathcalA
                 RRrHatScale = (1.0 / (8.0 * math.pi * (a[i]**3) * (a[j]**3))) * mathcalB
                 
-                # Rotation-translation
-                RTScale = (1.0 / (16.0 * math.pi * (a[j]**3) * a[i])) * ( ( ((a[j] - a[i] + distances[i][j])**2)*(a[i]**2+2.0*a[i]*(a[j]+distances[i][j])-3.0*((a[j]-distances[i][j])**2))  ) / (8.0 * (distances[i][j]**2)))
+                # Translation-rotation
+                TRScale = (1.0 / (16.0 * math.pi * (a[j]**3) * a[i])) * ( ( ((a[j] - a[i] + distances[i][j])**2)*(a[i]**2+2.0*a[i]*(a[j]+distances[i][j])-3.0*((a[j]-distances[i][j])**2))  ) / (8.0 * (distances[i][j]**2)))
 
             else:
                 raise NotImplementedError("One bead entirely inside another")
@@ -196,12 +196,12 @@ def mu(centres,radii,blockmatrix = False):
             # GRPY approximation is of form scalar * matrix + scalar * matrix
             muTT[i,j,:,:] = TTidentityScale * np.identity(3) + TTrHatScale * np.outer(rHatMatrix[i][j],rHatMatrix[i][j])
             muRR[i,j,:,:] = RRidentityScale * np.identity(3) + RRrHatScale * np.outer(rHatMatrix[i][j],rHatMatrix[i][j])
-            muRT[i,j,:,:] = RTScale * _epsilonVec(rHatMatrix[i][j])
+            muTR[i,j,:,:] = TRScale * _epsilonVec(rHatMatrix[i][j])
 
     if blockmatrix:
-        return np.array([[muTT,muRT],[_transTranspose(muRT),muRR]])
+        return np.array([[muTT,muTR],[_transTranspose(muTR),muRR]])
     else:
-        return np.hstack(np.hstack(np.hstack(np.hstack(np.array([[muTT,muRT],[_transTranspose(muRT),muRR]])))))
+        return np.hstack(np.hstack(np.hstack(np.hstack(np.array([[muTT,muTR],[_transTranspose(muTR),muRR]])))))
         
         
         

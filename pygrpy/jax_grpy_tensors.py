@@ -112,11 +112,11 @@ def mu(centres, radii):
     muRRrHatScaleClose     = (1.0 / (8.0 * math.pi * (ai ** 3) * (aj ** 3))) * mathcalB
 
     # ### coupling matricies
-    muRTScaleDiag          = 0.0
+    muTRScaleDiag          = 0.0
 
-    muRTScaleFar           = 1.0 / (8 * math.pi * (dist ** 2))
+    muTRScaleFar           = 1.0 / (8 * math.pi * (dist ** 2))
 
-    muRTScaleClose         = (1.0 / (16.0 * math.pi * (aj ** 3) * ai)) * ( ( ((aj - ai + dist) ** 2) * ( ai ** 2 + 2.0 * ai * (aj + dist) - 3.0 * ((aj - dist) ** 2))) / (8.0 * (dist ** 2)) )
+    muTRScaleClose         = (1.0 / (16.0 * math.pi * (aj ** 3) * ai)) * ( ( ((aj - ai + dist) ** 2) * ( ai ** 2 + 2.0 * ai * (aj + dist) - 3.0 * ((aj - dist) ** 2))) / (8.0 * (dist ** 2)) )
 
     # solution branch indicators
     isFar = 1.0*(dist > ai + aj)
@@ -129,7 +129,7 @@ def mu(centres, radii):
     muRRidentityScale = isDiag * muRRidentityScaleDiag + (1.0 - isDiag) * (isFar * muRRidentityScaleFar + (1.0 - isFar) * muRRidentityScaleClose)
     muRRrHatScale = (1.0 - isDiag) * (isFar * muRRrHatScaleFar + (1.0 - isFar) * muRRrHatScaleClose)
 
-    muRTScale = (1.0 - isDiag) * (isFar * muRTScaleFar + (1.0 - isFar) * muRTScaleClose)
+    muTRScale = (1.0 - isDiag) * (isFar * muTRScaleFar + (1.0 - isFar) * muTRScaleClose)
 
     # construct large matricies
     muTT = (
@@ -140,13 +140,13 @@ def mu(centres, radii):
                 muRRidentityScale[:,:,jnp.newaxis,jnp.newaxis] * jnp.identity(3)[jnp.newaxis,jnp.newaxis,:,:] 
                 + muRRrHatScale[:,:,jnp.newaxis,jnp.newaxis] * rHatMatrix[:,:,jnp.newaxis,:] * rHatMatrix[:,:,:,jnp.newaxis]
            )
-    muRT = (
-                muRTScale[:,:,jnp.newaxis,jnp.newaxis] * epsilonRHatMatrix[:,:,:,:]
+    muTR = (
+                muTRScale[:,:,jnp.newaxis,jnp.newaxis] * epsilonRHatMatrix[:,:,:,:]
            )
 
     # flatten (2,2,n,n,3,3) tensor in the correct order
     return jax.lax.reshape(
-        jnp.array([[muTT,muRT],[_transTranspose(muRT),muRR]]),
+        jnp.array([[muTT,muTR],[_transTranspose(muTR),muRR]]),
         (6*n,6*n),
         dimensions = (0,2,4,1,3,5)
     )
