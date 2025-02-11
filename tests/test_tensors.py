@@ -143,6 +143,13 @@ def test_fast_trace():
     fast_trace_mu = pygrpy.grpy_tensors.muTT_trace(centres_four,sizes_four)
     assert np.allclose(slow_trace_mu, fast_trace_mu)
 
+def test_enseble_radius():
+    n_conformers = 20000
+    n_beads = 10    
+    loc = 1.0*np.arange(n_conformers*n_beads*3).reshape(n_conformers,n_beads,3)
+    radius = pygrpy.grpy.ensembleAveragedStokesRadius(1.0*loc, np.ones(n_beads))
+    assert np.allclose(radius,5.776354367695771)
+
 if __name__ == "__main__":
     test_mobility_single_bead()
     test_mobility_two_beads()

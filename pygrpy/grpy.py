@@ -66,11 +66,9 @@ def ensembleAveragedStokesRadius(ensemble_centres, sizes):
 
 
     """
-    grand_grand_mu = np.array(
-        [pygrpy.grpy_tensors.muTT(locations, sizes) for locations in ensemble_centres]
-    )
-    grand_mu = np.mean(grand_grand_mu, axis=0)
-    grand_trace = np.trace(grand_mu, axis1=-2, axis2=-1)
+    grand_trace = np.mean(
+        pygrpy.grpy_tensors.muTT_trace_vectorised(ensemble_centres,sizes)
+    ,axis=0)
 
     inv_mat = np.linalg.inv(grand_trace)
     total = np.sum(inv_mat)
