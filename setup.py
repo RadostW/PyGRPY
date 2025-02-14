@@ -3,8 +3,8 @@ from setuptools import setup
 with open('README.md') as f:
     long_description = f.read()
 
-setup(name='PyGRPY',
-      version='0.1.4',
+setup(name='pygrpy',
+      version='0.1.5',
       description='Python port of Generalized Rotne Prager Yakamava tensors',
       url='https://github.com/RadostW/PyGRPY/',
       author='Radost Waszkiewicz',
@@ -15,6 +15,6 @@ setup(name='PyGRPY',
           'Documentation': 'https://pygrpy.readthedocs.io',
           'Source': 'https://github.com/RadostW/PyGRPY/'
       },
-      license='GNU GPLv3',
+      license="GPL-3.0-or-later",
       packages=['pygrpy'],
       zip_safe=False)

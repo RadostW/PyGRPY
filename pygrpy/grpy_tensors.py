@@ -1,7 +1,5 @@
 import math
 import numpy as np
-import scipy as sp
-import scipy.linalg
 
 _epsilon = np.array([[[0,0,0],[0,0,1],[0,-1,0]],[[0,0,-1],[0,0,0],[1,0,0]],[[0,1,0],[-1,0,0],[0,0,0]]]) #levi-civita(3)
 
@@ -31,6 +29,9 @@ def _epsilonVec(vec):
     return ret
 
 def _lapackinv(mat):
+    import scipy as sp
+    import scipy.linalg
+    
     zz , _ = sp.linalg.lapack.dpotrf(mat, False, False) #cholesky decompose
     inv_M , info = sp.linalg.lapack.dpotri(zz) #invert triangle
     inv_M = np.triu(inv_M) + np.triu(inv_M, k=1).T #combine triangles
