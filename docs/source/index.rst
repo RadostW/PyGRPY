@@ -145,7 +145,7 @@ Example use
     )  # sizes in angstroms
 
     centre_of_mass = np.mean(ensemble, axis=1)  # shape = (conformer,3)
-    gyration_radius = np.sqrt(np.mean((ensemble - centre_of_mass.reshape(-1, 1, 3)) ** 2))
+    gyration_radius = np.sqrt(3) * np.sqrt(np.mean((ensemble - centre_of_mass.reshape(-1, 1, 3)) ** 2))
 
     bootstrap_rounds = 5
     if args.sigmas:
